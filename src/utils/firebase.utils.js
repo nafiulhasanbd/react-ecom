@@ -1,13 +1,12 @@
-// Import the functions you need from the SDKs you need
-
 import { initializeApp } from 'firebase/app'
 import {
   getAuth,
-  signInWithPopup,
   signInWithRedirect,
-  GoogleAuthProvider
+  signInWithPopup,
+  GoogleAuthProvider,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword
 } from 'firebase/auth'
-
 import { getFirestore, doc, getDoc, setDoc } from 'firebase/firestore'
 
 // Your web app's Firebase configuration
@@ -20,47 +19,58 @@ const firebaseConfig = {
   appId: '1:679022098315:web:b1e4293be310074e17218e'
 }
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig)
+const firebaseApp = initializeApp(firebaseConfig)
 
-const provider = new GoogleAuthProvider()
-provider.setCustomParameters({
+const googleProvider = new GoogleAuthProvider()
+
+googleProvider.setCustomParameters({
   prompt: 'select_account'
 })
 
 export const auth = getAuth()
-export const signInWithGooglePopup = () => signInWithPopup(auth, provider)
-export const signInWithGoogleRedirect = () => signInWithRedirect(auth, provider)
+export const signInWithGooglePopup = () => signInWithPopup(auth, googleProvider)
+export const signInWithGoogleRedirect = () =>
+  signInWithRedirect(auth, googleProvider)
 
 export const db = getFirestore()
 
-export const createUserDocumentFromAuth = async userAuth => {
+export const createUserDocumentFromAuth = async (
+  userAuth,
+  additionalInformation = {}
+) => {
+  if (!userAuth) return
+
   const userDocRef = doc(db, 'users', userAuth.uid)
 
-  console.log(userDocRef)
+  const userSnapshot = await getDoc(userDocRef)
 
-  const userSnapShot = await getDoc(userDocRef)
-  console.log(userSnapShot)
-
-  if (!userSnapShot.exists()) {
+  if (!userSnapshot.exists()) {
     const { displayName, email } = userAuth
-    const createAt = new Date()
+    const createdAt = new Date()
 
     try {
       await setDoc(userDocRef, {
         displayName,
         email,
-        createAt
+        createdAt,
+        ...additionalInformation
       })
     } catch (error) {
-      console.log('error createing the user', error.message)
+      console.log('error creating the user', error.message)
     }
   }
 
-  // if user data exists
   return userDocRef
+}
 
-  // if user data doesn't exisits // create data
+export const createAuthUserWithEmailAndPassword = async (email, password) => {
+  if (!email || !password) return
 
-  // return userDocRef
+  return await createUserWithEmailAndPassword(auth, email, password)
+}
+
+export const signInAuthUserWithEmailAndPassword = async (email, password) => {
+  if (!email || !password) return
+
+  return await signInWithEmailAndPassword(auth, email, password)
 }
